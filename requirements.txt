@@ -1,11 +1,14 @@
 # Core — everything the library, tests and dashboard need.
+# This file is also what Streamlit Community Cloud installs, so it must stay
+# core-only: pymc and prophet live in requirements-optional.txt (Prophet
+# compiles Stan on first fit; PyMC is too heavy for a 1-CPU free tier).
 numpy>=2.0
 pandas>=2.2
 scikit-learn>=1.5
 statsmodels>=0.14
 matplotlib>=3.9
 plotly>=5.24
-streamlit>=1.40
+streamlit>=1.40,<2
 kagglehub>=0.3
 pytest>=8.0
 

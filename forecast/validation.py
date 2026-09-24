@@ -10,6 +10,9 @@ README comes from here.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -211,3 +214,89 @@ def forecast_all(
         except Exception as exc:  # noqa: BLE001
             skipped[model_name] = f"{type(exc).__name__}: {exc}"
     return {"forecasts": forecasts, "skipped": skipped}
+
+
+# --------------------------------------------------------------------------
+# Precomputed measured results
+#
+# The one intentional exception to "forecast/ does no I/O": these two functions
+# read the committed reports/ artifacts so the deployed app can show the full
+# measured comparison (Prophet included) without refitting. They are pure
+# `path -> data` functions and stay fully testable.
+# --------------------------------------------------------------------------
+MEASURED_COLUMNS = (
+    "model", "mae", "rmse", "n_eval",
+    "picp_80", "mpiw_80", "winkler_80",
+    "picp_95", "mpiw_95", "winkler_95",
+)
+
+
+def default_reports_dir() -> Path:
+    return Path(__file__).resolve().parents[1] / "reports"
+
+
+def load_measured_table(reports_dir: Path | str | None = None) -> dict:
+    """Read the committed walk-forward results instead of re-running them.
+
+    Returns ``{"table": DataFrame, "meta": dict}`` where ``meta`` carries the
+    configuration the numbers were measured under (folds, horizon, min_train,
+    engine, source label). Raises ``FileNotFoundError`` if the artifacts are
+    missing and ``ValueError`` if the table is missing required columns.
+    """
+    reports_dir = Path(reports_dir) if reports_dir else default_reports_dir()
+    table_path = reports_dir / "comparison_table.csv"
+    if not table_path.is_file():
+        raise FileNotFoundError(
+            f"measured comparison not found at {table_path}. Run "
+            "`python scripts/run_evaluation.py --source walmart` to generate it."
+        )
+    table = pd.read_csv(table_path)
+    missing = [column for column in MEASURED_COLUMNS if column not in table.columns]
+    if missing:
+        raise ValueError(f"{table_path} is missing columns: {missing}")
+
+    meta: dict = {"n_eval": int(table["n_eval"].iloc[0]) if len(table) else 0}
+    metrics_path = reports_dir / "metrics.json"
+    if metrics_path.is_file():
+        payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+        walk_forward = payload.get("walk_forward", {})
+        meta.update(
+            {
+                "source_label": payload.get("source_label"),
+                "folds": walk_forward.get("folds"),
+                "horizon": walk_forward.get("horizon"),
+                "min_train": walk_forward.get("min_train"),
+                "engine_requested": walk_forward.get("engine_requested"),
+                "engines_used": walk_forward.get("engines_used", {}),
+                "log_target": payload.get("bayesian_log_target"),
+            }
+        )
+    return {"table": table, "meta": meta}
+
+
+def measured_config_mismatches(
+    meta: dict,
+    horizon: int,
+    max_folds: int | None,
+    engine: str,
+    min_train: int | None = None,
+) -> list[str]:
+    """Differences between the sidebar settings and how the table was measured.
+
+    The Comparison tab shows this so a committed table is never mistaken for a
+    live re-run under different settings.
+    """
+    diffs: list[str] = []
+    if meta.get("horizon") is not None and horizon != meta["horizon"]:
+        diffs.append(f"horizon {horizon} vs measured {meta['horizon']} weeks")
+    if meta.get("folds") is not None and max_folds != meta["folds"]:
+        diffs.append(f"{max_folds} folds vs measured {meta['folds']}")
+    if meta.get("engine_requested") is not None and engine != meta["engine_requested"]:
+        diffs.append(f"engine '{engine}' vs measured '{meta['engine_requested']}'")
+    if (
+        min_train is not None
+        and meta.get("min_train") is not None
+        and min_train != meta["min_train"]
+    ):
+        diffs.append(f"min_train {min_train} vs measured {meta['min_train']} weeks")
+    return diffs

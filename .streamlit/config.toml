@@ -1,0 +1,21 @@
+# Streamlit configuration.
+#
+# NOTE: this file must live at the REPOSITORY ROOT even though the app
+# entrypoint is dashboard/app.py — Community Cloud only reads the root config.
+# Secrets belong in .streamlit/secrets.toml locally (git-ignored) or in the
+# Cloud "Advanced settings" dialog. This app needs no secrets.
+
+[theme]
+primaryColor = "#1f77b4"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+font = "sans serif"
+
+[server]
+# Not set here on purpose: `headless = true` would stop `streamlit run` opening
+# a browser locally. Community Cloud sets headless itself.
+# XSRF and CORS protection stay ON. Never disable them for a public app.
+
+[browser]
+gatherUsageStats = false

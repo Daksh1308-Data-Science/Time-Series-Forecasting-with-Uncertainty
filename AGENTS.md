@@ -32,9 +32,11 @@ Build **retail demand forecasting with honest uncertainty**:
    interval quality must come from `forecast/validation.py` walk-forward folds
    (expanding window), never from in-sample residuals or a single holdout.
 5. **Optional dependencies must never break anything.** PyMC and Prophet are
-   optional; `engine="auto"` falls back to the closed-form conjugate posterior,
-   and `run_comparison` reports a failed model in `skipped` with the reason
-   instead of crashing.
+   optional; `resolve_engine("pymc")` falls back to `closed_form` when PyMC is
+   unimportable (surfacing `engine_requested` vs `engine`), and
+   `run_comparison` reports a failed model in `skipped` with the reason instead
+   of crashing. Runtime messages must be **platform-neutral** — never tell a
+   Linux/Cloud visitor to run a Windows CmdStan command.
 6. **Scenario results are counterfactual.** Anything from `forecast/scenario.py`
    is a model-based what-if, labelled as such in UI and docs.
 
@@ -124,6 +126,16 @@ It is a real Bayesian engine, not a shortcut around uncertainty.
   with keys `table, folds, ran, skipped, info, descriptions`. A model that
   raises is recorded in `skipped` with `"TypeName: message"`.
 - `forecast_all(train_df, periods=6, models=..., ...) -> {"forecasts", "skipped"}`.
+- `load_measured_table(reports_dir=None) -> {"table", "meta"}` — reads the
+  committed `reports/comparison_table.csv` plus metadata from `metrics.json`.
+  `FileNotFoundError` if absent, `ValueError` if a required column is missing.
+  This pair is the **one intentional exception** to the no-I/O rule below: a pure
+  `path -> data` function, kept fully testable.
+- `measured_config_mismatches(meta, horizon, max_folds, engine, min_train=None)
+  -> list[str]` — differences between the sidebar settings and how the committed
+  table was measured, so a stale table is never read as a live re-run.
+- Measured columns (`MEASURED_COLUMNS`): `model, mae, rmse, n_eval, picp_80,
+  mpiw_80, winkler_80, picp_95, mpiw_95, winkler_95`.
 
 ### `forecast/scenario.py`
 - `apply_scenario(forecast_df, factor=1.2, dates=None) -> DataFrame` — scales
@@ -133,9 +145,16 @@ It is a real Bayesian engine, not a shortcut around uncertainty.
 ### `dashboard/app.py`
 - Exactly **5 tabs, fixed order/names**: `Overview & data`, `Prophet`,
   `Bayesian`, `Comparison & coverage`, `Scenario`.
-- Sidebar: data source, horizon, Bayesian engine, walk-forward folds.
+- Sidebar: data source, horizon, Bayesian engine, walk-forward folds. The fold
+  default must stay **6** to match `configs/default.toml` and the committed
+  measured run; a different default makes every visitor see a mismatch warning.
+- Comparison tab: radio with `Measured results (from reports/)` (default) and
+  `Live re-run in this environment`; both feed `render_comparison_outputs`.
+- The "Include Prophet" checkbox only appears when `prophet_available()`; other-
+  wise a caption explains why Prophet cannot be re-run here.
 - Heavy work behind `st.cache_data`; missing optional deps render a message,
-  never a crash.
+  never a crash. Use `width="stretch"`, **not** `use_container_width` (removed
+  after 2025-12-31).
 
 ## 5. Build order & Definition of Done per milestone
 
@@ -194,6 +213,27 @@ It is a real Bayesian engine, not a shortcut around uncertainty.
   is a proportion near 1.
 - **Dependencies:** no new dependency without a reason and a note. `pymc` and
   `prophet` live in `requirements-optional.txt`; config uses stdlib `tomllib`.
+
+### Deployment (Streamlit Community Cloud)
+
+- **Entrypoint is `dashboard/app.py`**, typed into the deploy form. Do not add a
+  root `app.py` shim; Cloud accepts a subdirectory entrypoint and a shim only
+  creates a second thing to keep in sync.
+- **`.streamlit/config.toml` must be at the repository root**, even though the
+  entrypoint is in a subdirectory. Never disable XSRF/CORS protection.
+- **`pymc` and `prophet` must never enter `requirements.txt`.** Prophet compiles
+  Stan on first fit (fragile server-side); PyMC is heavy on a 1-CPU free tier.
+  The app is designed to work without both, and that combination is verified in
+  a clean venv holding only `requirements.txt`.
+- **Python 3.12 on Cloud** (its default). Develop/test on more than one
+  interpreter — 3.11 and 3.14 are the ones available locally.
+- **No secrets.** The processed series is committed, so the app never needs
+  Kaggle credentials. Never put a token in Cloud secrets or in the repo.
+- **The deployed app serves committed numbers.** After any model change, re-run
+  `scripts/run_evaluation.py` and push `reports/` so the measured view stays
+  truthful.
+- Run locally the way Cloud runs: `streamlit run dashboard/app.py` **from the
+  repo root** (Cloud's working directory is always the root).
 
 ## 7. Pitfalls (recurring agent mistakes)
 

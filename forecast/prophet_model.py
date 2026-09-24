@@ -7,12 +7,31 @@ variation (a frequentist-flavoured construction). We keep them as the
 
 from __future__ import annotations
 
+from importlib.util import find_spec
+
 import pandas as pd
 
 from .holidays import walmart_holidays
 from .schema import band_columns, future_dates, level_tag
 
 DEFAULT_LEVELS = (0.80, 0.95)
+
+# Shown wherever Prophet is missing (e.g. the Cloud deployment). Deliberately
+# platform-neutral: CmdStan/toolchain advice is local-setup detail and belongs in
+# the docs, not in a message a random Cloud visitor reads.
+PROPHET_MISSING_MESSAGE = (
+    "Prophet is not installed in this environment. It is an **optional** dependency: it "
+    "compiles a Stan model on first fit, which is slow and fragile in serverless "
+    "deployments, so the deployed app reports it as unavailable rather than attempting it. "
+    "The Bayesian and seasonal-naive models run everywhere. To fit Prophet locally: "
+    "`pip install -r requirements-optional.txt`. The Comparison tab still shows Prophet's "
+    "measured results, computed offline by `scripts/run_evaluation.py`."
+)
+
+
+def prophet_available() -> bool:
+    """True if the optional ``prophet`` package can be imported (no import cost)."""
+    return find_spec("prophet") is not None
 
 
 def prophet_forecast(
@@ -32,11 +51,7 @@ def prophet_forecast(
     try:
         from prophet import Prophet
     except ImportError as exc:  # pragma: no cover - optional dependency
-        raise ImportError(
-            "prophet is not installed. Install requirements-optional.txt; on "
-            "Windows the first fit needs CmdStan: python -c \"import cmdstanpy; "
-            "cmdstanpy.install_cxx_toolchain(force=True)\"."
-        ) from exc
+        raise ImportError(PROPHET_MISSING_MESSAGE) from exc
 
     frame = train_df.loc[:, ["ds", "y"]].copy()
     frame["ds"] = pd.to_datetime(frame["ds"])

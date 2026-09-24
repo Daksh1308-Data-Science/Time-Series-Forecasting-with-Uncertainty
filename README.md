@@ -208,14 +208,37 @@ never observations, and are labelled as such in the dashboard.
 2. **Prophet** — forecast with nested 80/95% bands.
 3. **Bayesian** — posterior predictive bands, the engine actually used, the full
    posterior summary for every term (mean, sd, 95% credible interval).
-4. **Comparison & coverage** — the walk-forward table plus a
-   coverage-vs-nominal chart, with any skipped model named and explained.
+4. **Comparison & coverage** — the walk-forward results plus a
+   coverage-vs-nominal chart. Defaults to the **measured** results committed in
+   `reports/` (all three models, Prophet included); switch to the **live
+   re-run** radio to refit in-session for whatever is installed, and a warning
+   appears if the sidebar settings differ from how the table was measured.
 5. **Scenario** — demand-shift slider that scales whole distributions.
 
 The sidebar switches data source (real Walmart ↔ synthetic demo), horizon,
 Bayesian engine and fold count. Heavy fits sit behind `st.cache_data`. If
-Prophet or PyMC is missing, the app degrades to the exact engine and says which
-model was skipped and why — it never crashes.
+Prophet or PyMC is missing, the app degrades to the exact engine and explains
+which model was skipped and why — it never crashes.
+
+## Deploying to Streamlit Community Cloud
+
+The dashboard deploys as-is: public repo, root `requirements.txt`, entrypoint
+`dashboard/app.py`, **no secrets** (the processed series is committed).
+
+```bash
+# streamlit.community.cloud → Create app → "Yup, I have an app"
+#   repository: Daksh1308-Data-Science/Time-Series-Forecasting-with-Uncertainty
+#   branch:     main
+#   file path:  dashboard/app.py
+# Advanced settings → Python 3.12, Secrets empty → Deploy
+```
+
+Pushes to `main` redeploy automatically. `pymc` and `prophet` are intentionally
+**not** installed on Cloud — Prophet compiles Stan on first fit (slow and fragile
+server-side) and PyMC is heavy on a 1-CPU free tier — so the Comparison tab
+serves the committed measured results and the Bayesian tab uses the instant exact
+engine. Full runbook, free-tier expectations and a troubleshooting table:
+[`docs/deployment.md`](docs/deployment.md).
 
 ## Architecture
 
@@ -239,6 +262,7 @@ tests/                     # 47 tests, known-value fixtures
 configs/default.toml       # stdlib tomllib config
 reports/                   # measured outputs cited above
 docs/images/               # the figures embedded above (generated, not hand-drawn)
+docs/deployment.md         # Streamlit Community Cloud runbook
 docs/methodology.md        # models, intervals, how to read PICP/MPIW/Winkler
 data/README.md             # dataset provenance and acquisition
 ```

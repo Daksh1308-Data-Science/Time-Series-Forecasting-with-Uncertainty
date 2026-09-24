@@ -19,6 +19,24 @@ def test_resolve_engine_auto_falls_back_without_pymc(monkeypatch):
     assert resolve_engine("closed_form") == "closed_form"
 
 
+def test_resolve_engine_pymc_falls_back_instead_of_raising(monkeypatch):
+    """An explicit pymc request on a machine without pymc must not crash the app.
+
+    This is the Cloud deployment path: the sidebar offers the NUTS engine, pymc
+    is not installed, and the Bayesian tab has to degrade to the exact engine.
+    """
+    monkeypatch.setitem(sys.modules, "pymc", None)
+    assert resolve_engine("pymc") == "closed_form"
+
+
+def test_explicit_pymc_request_records_the_fallback():
+    train = generate_weekly_sales(n_weeks=80, seed=42)
+    model = BayesianForecast(train, engine="pymc", order=2, seed=0)
+    assert model.engine_requested == "pymc"  # what the user asked for
+    assert model.engine == resolve_engine("pymc")  # what actually runs
+    model.fit()  # must not raise even when it falls back
+
+
 def test_build_design_contains_expected_terms():
     t = np.arange(10, dtype=float)
     holidays = pd.DataFrame({"Thanksgiving": [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]})

@@ -42,11 +42,17 @@ ENGINES = ("auto", "pymc", "closed_form")
 
 
 def resolve_engine(engine: str = "auto") -> str:
-    """Map "auto" to a concrete engine; keep explicit requests honest."""
+    """Map a requested engine to one that is actually available.
+
+    ``"pymc"`` requested but not importable falls back to ``"closed_form"``
+    instead of raising: an optional dependency must never break the app (the
+    Cloud deployment has no PyMC by design). Callers can compare
+    ``engine_requested`` with ``engine`` to tell the user what happened.
+    """
     if engine not in ENGINES:
         raise ValueError(f"engine must be one of {ENGINES}, got {engine!r}")
-    if engine != "auto":
-        return engine
+    if engine == "closed_form":
+        return "closed_form"
     try:
         import pymc  # noqa: F401
 
