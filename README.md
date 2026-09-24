@@ -1,5 +1,9 @@
 # Time Series Forecasting with Uncertainty
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://time-series-forecasting-with-uncertainty.streamlit.app/)
+
+**Try it live →** https://time-series-forecasting-with-uncertainty.streamlit.app/
+
 Retail demand forecasting that reports **how wrong it might be**, not just what
 it predicts.
 
@@ -222,7 +226,9 @@ which model was skipped and why — it never crashes.
 
 ## Deploying to Streamlit Community Cloud
 
-The dashboard deploys as-is: public repo, root `requirements.txt`, entrypoint
+**This project is deployed:** https://time-series-forecasting-with-uncertainty.streamlit.app/
+
+It deploys as-is — public repo, root `requirements.txt`, entrypoint
 `dashboard/app.py`, **no secrets** (the processed series is committed).
 
 ```bash
