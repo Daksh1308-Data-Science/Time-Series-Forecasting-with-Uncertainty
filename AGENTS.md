@@ -57,10 +57,12 @@ Time Series Forecasting with Uncertainty/
 │   └── scenario.py         # apply_scenario, scenario_impact
 ├── dashboard/app.py        # Streamlit app, exactly 5 tabs
 ├── scripts/run_evaluation.py  # reproducible pipeline -> reports/
+├── scripts/make_figures.py    # regenerates docs/images/*.png from real data
 ├── tests/                  # pytest, known-value fixtures
 ├── configs/default.toml    # stdlib tomllib config (no YAML dependency)
 ├── data/                   # processed series committed; raw Kaggle files ignored
 ├── reports/                # measured outputs cited by the README
+├── docs/images/            # README figures — generated, never hand-drawn
 ├── docs/methodology.md
 ├── notebooks/README.md
 ├── requirements.txt / requirements-optional.txt
@@ -184,6 +186,12 @@ It is a real Bayesian engine, not a shortcut around uncertainty.
   MAE/RMSE/PICP/MPIW/Winkler values, exact seasonal-naive arithmetic, coverage
   assertions on synthetic data.
 - **Forecast tables use the `schema.py` layout** for every model.
+- **README images are generated, never hand-drawn.** Every figure comes from
+  `python scripts/make_figures.py`, which reads the real series and
+  `reports/comparison_table.csv`. Re-run it after any model change so the
+  numbers in the images match the tables. Avoid truncated bar axes: use
+  dot/lollipop marks anchored on a reference line when the interesting range
+  is a proportion near 1.
 - **Dependencies:** no new dependency without a reason and a note. `pymc` and
   `prophet` live in `requirements-optional.txt`; config uses stdlib `tomllib`.
 
