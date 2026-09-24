@@ -56,6 +56,7 @@ def engine_crosscheck(
     draws: int,
     tune: int,
     chains: int,
+    log_target: bool,
 ) -> dict | None:
     """Check the exact closed-form posterior against a full NUTS fit.
 
@@ -76,9 +77,18 @@ def engine_crosscheck(
         print("cross-check skipped: pymc is not importable")
         return None
 
-    closed = BayesianForecast(series, order=order, engine="closed_form", seed=seed).fit()
+    closed = BayesianForecast(
+        series, order=order, engine="closed_form", seed=seed, log_target=log_target
+    ).fit()
     sampled = BayesianForecast(
-        series, order=order, engine="pymc", seed=seed, draws=draws, tune=tune, chains=chains
+        series,
+        order=order,
+        engine="pymc",
+        seed=seed,
+        draws=draws,
+        tune=tune,
+        chains=chains,
+        log_target=log_target,
     ).fit()
 
     params = closed.parameter_summary().merge(
@@ -151,6 +161,12 @@ def main() -> None:
     parser.add_argument("--tune", type=int, default=cfg["bayesian"]["tune"])
     parser.add_argument("--chains", type=int, default=cfg["bayesian"]["chains"])
     parser.add_argument("--seed", type=int, default=cfg["bayesian"]["seed"])
+    parser.add_argument(
+        "--log-target",
+        action=argparse.BooleanOptionalAction,
+        default=cfg["bayesian"]["log_target"],
+        help="model log(demand) instead of raw demand (recommended for retail)",
+    )
     parser.add_argument("--scenario-factor", type=float, default=1.2)
     parser.add_argument(
         "--tag",
@@ -182,7 +198,14 @@ def main() -> None:
     print(f"seasonal strength (STL, 52-week): {strength:.3f}")
 
     # --- Week 2: walk-forward coverage ------------------------------------
-    model_options = {"bayesian": {"draws": args.draws, "tune": args.tune, "chains": args.chains}}
+    model_options = {
+        "bayesian": {
+            "draws": args.draws,
+            "tune": args.tune,
+            "chains": args.chains,
+            "log_target": args.log_target,
+        }
+    }
     comparison = run_comparison(
         series,
         horizon=horizon,
@@ -223,6 +246,7 @@ def main() -> None:
         draws=args.draws,
         tune=args.tune,
         chains=args.chains,
+        log_target=args.log_target,
     ).fit()
     posterior.parameter_summary().to_csv(params_path, index=False)
 
@@ -232,7 +256,14 @@ def main() -> None:
         print("engine cross-check skipped (--no-crosscheck)")
     else:
         crosscheck = engine_crosscheck(
-            series, args.fourier_order, args.seed, horizon, args.draws, args.tune, args.chains
+            series,
+            args.fourier_order,
+            args.seed,
+            horizon,
+            args.draws,
+            args.tune,
+            args.chains,
+            args.log_target,
         )
 
     metrics = {
@@ -253,6 +284,7 @@ def main() -> None:
             "table": json.loads(table.to_json(orient="records")),
         },
         "scenario": {"factor": args.scenario_factor},
+        "bayesian_log_target": args.log_target,
         "engine_crosscheck": crosscheck,
     }
     (REPORTS / f"metrics{tag}.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")

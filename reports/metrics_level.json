@@ -12,10 +12,10 @@
     "folds": 6,
     "horizon": 6,
     "min_train": 104,
-    "engine_requested": "pymc",
+    "engine_requested": "closed_form",
     "engines_used": {
       "naive": null,
-      "bayesian": "pymc",
+      "bayesian": "closed_form",
       "prophet": null
     },
     "skipped": {},
@@ -25,12 +25,12 @@
         "mae": 1348261.5312989375,
         "rmse": 1808316.2952247662,
         "n_eval": 36,
-        "picp_80": 0.9444444444,
-        "mpiw_80": 5701258.965065126,
-        "winkler_80": 6893569.057987455,
+        "picp_80": 0.9166666667,
+        "mpiw_80": 5715454.363128104,
+        "winkler_80": 7033977.8722492885,
         "picp_95": 0.9722222222,
-        "mpiw_95": 8713300.36324016,
-        "winkler_95": 11429549.891434623
+        "mpiw_95": 8759661.243088223,
+        "winkler_95": 11603900.510415353
       },
       {
         "model": "naive",
@@ -46,21 +46,21 @@
       },
       {
         "model": "bayesian",
-        "mae": 1891675.3934382407,
-        "rmse": 2554253.9563793303,
+        "mae": 2095762.742243867,
+        "rmse": 2817133.1899688104,
         "n_eval": 36,
-        "picp_80": 0.8888888889,
-        "mpiw_80": 8593502.24905617,
-        "winkler_80": 10102073.00679024,
+        "picp_80": 0.9166666667,
+        "mpiw_80": 10298810.711188227,
+        "winkler_80": 11509583.458102755,
         "picp_95": 0.9722222222,
-        "mpiw_95": 13229551.508569872,
-        "winkler_95": 14404713.782586344
+        "mpiw_95": 15984013.205497261,
+        "winkler_95": 16317831.247823797
       }
     ]
   },
   "scenario": {
     "factor": 1.2
   },
-  "bayesian_log_target": true,
+  "bayesian_log_target": false,
   "engine_crosscheck": null
 }

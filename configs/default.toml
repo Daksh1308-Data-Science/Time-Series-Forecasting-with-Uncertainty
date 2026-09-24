@@ -23,6 +23,10 @@ fourier_order = 6      # Fourier pairs for the 52-week seasonal cycle
 # `scripts/run_evaluation.py` (reports/engine_crosscheck_*.csv).
 # Set to "pymc" to sample the posterior with NUTS in every walk-forward fold.
 engine = "closed_form" # auto | pymc | closed_form
+# Retail demand is multiplicative and right-skewed: the Gaussian belongs on
+# log(y). Exponentiating the predictive draws keeps the median and all
+# quantiles exact, so this costs nothing in correctness.
+log_target = true
 draws = 1500
 tune = 1500
 chains = 2

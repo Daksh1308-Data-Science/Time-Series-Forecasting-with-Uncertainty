@@ -90,12 +90,22 @@ Time Series Forecasting with Uncertainty/
 
 ### `forecast/bayesian_model.py`
 - `BayesianForecast(df, period=52, order=6, holiday_dates=None, engine="auto",
-  seed=42, draws=1500, tune=1500, chains=2, levels=(0.80, 0.95))`
+  seed=42, draws=1500, tune=1500, chains=2, levels=(0.80, 0.95), log_target=False)`
   - `.fit() -> self`; `engine` resolves to `"pymc"` or `"closed_form"`.
   - `.sample_predictive(periods, n_samples=2000) -> (dates, samples)`
   - `.predict(periods=6, levels=None, n_samples=2000) -> DataFrame` (median +
     central bands; lower bound clipped at zero).
-  - `.parameter_summary() -> DataFrame` (term, mean, sd, lower_95, upper_95).
+  - `.parameter_summary() -> DataFrame` (term, mean, sd, lower_95, upper_95) —
+    coefficients are on the **response** scale, i.e. log units when
+    `log_target=True`.
+  - `log_target=True` models `log(y)` and exponentiates the predictive draws.
+    Medians and quantiles are exact under a monotone transform, so no smearing
+    correction is needed. This is the default in `configs/default.toml` because
+    it measurably beat level-space on the real data.
+  - The PyMC engine fits a **standardised** response with an `N(0, 1)` prior and
+    maps coefficients back (`loc + scale * X @ beta_z`). Never put an
+    unstandardised `N(0, std(y))` prior on the intercept: in log space that puts
+    the posterior ~170 prior SDs away and stalls NUTS.
 - `build_design(t, denom, period, order, holidays) -> (X, names)` — intercept,
   scaled trend, Fourier pairs, holiday dummies.
 - `resolve_engine(engine) -> "pymc" | "closed_form"`.
@@ -151,13 +161,18 @@ It is a real Bayesian engine, not a shortcut around uncertainty.
   (verified headlessly by `tests/test_dashboard.py`); README tables cite
   `reports/` outputs; real-vs-synthetic labels present.
 
-### M4 — Real data (BLOCKED on the user, not on code)
-- The loader, aggregation, cache and `--source walmart` path are implemented and
-  tested. Kaggle returns HTTP 401 until the competition rules are accepted in a
-  browser with that account; `download_walmart()` raises with the URL and the
-  dashboard renders the same instruction. Once accepted:
-  `python scripts/run_evaluation.py --source walmart`, then update the README
-  tables and delete the "numbers are synthetic" caveat.
+### M4 — Real data (DONE)
+- Real Kaggle Walmart series acquired, aggregated and cached at
+  `data/processed/weekly_total.csv` (143 weeks, 2010-02-05 .. 2012-10-26).
+- `data_loader.py` reads the zipped CSVs Kaggle actually serves and accepts both
+  the new `KAGGLE_API_TOKEN` / `~/.kaggle/access_token` and the legacy
+  `kaggle.json`; a rejected legacy token yields 401 on *every* call, so diagnose
+  auth before blaming the rules gate.
+- All README numbers now come from the real series. Measured finding: Prophet
+  wins on MAE and Winkler; all models are near-nominal at 95% coverage; the
+  Bayesian model trails because it has a single global trend (no changepoints).
+- DoD: `python scripts/run_evaluation.py --source walmart` reproduces every table
+  in the README.
 
 ## 6. Conventions
 

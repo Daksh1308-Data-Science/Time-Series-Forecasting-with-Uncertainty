@@ -1,12 +1,12 @@
 {
   "library_version": "0.1.0",
-  "source": "synthetic",
-  "source_label": "Synthetic weekly retail demand (seed 42) - NOT real data",
-  "rows": 156,
+  "source": "walmart",
+  "source_label": "Walmart Recruiting - Store Sales Forecasting (real, Kaggle)",
+  "rows": 143,
   "first_week": "2010-02-05",
-  "last_week": "2013-01-25",
+  "last_week": "2012-10-26",
   "decomposition": {
-    "seasonal_strength": 0.7342
+    "seasonal_strength": 0.9918
   },
   "walk_forward": {
     "folds": 6,
@@ -21,53 +21,54 @@
     "skipped": {},
     "table": [
       {
-        "model": "bayesian",
-        "mae": 339883.8052062055,
-        "rmse": 438500.13700696,
-        "n_eval": 36,
-        "picp_80": 0.6388888889,
-        "mpiw_80": 727994.5501002898,
-        "winkler_80": 1635732.3003840405,
-        "picp_95": 0.8611111111,
-        "mpiw_95": 1129760.9882913292,
-        "winkler_95": 2860296.916966713
-      },
-      {
         "model": "prophet",
-        "mae": 341329.8700642553,
-        "rmse": 424917.9894299529,
+        "mae": 1348261.5312989375,
+        "rmse": 1808316.2952247662,
         "n_eval": 36,
-        "picp_80": 0.5277777778,
-        "mpiw_80": 602259.0803752416,
-        "winkler_80": 1759283.5375384113,
-        "picp_95": 0.75,
-        "mpiw_95": 923571.7393627367,
-        "winkler_95": 3243496.2162733567
+        "picp_80": 0.9166666667,
+        "mpiw_80": 5724188.277296056,
+        "winkler_80": 7047872.943813566,
+        "picp_95": 0.9722222222,
+        "mpiw_95": 8722316.944434706,
+        "winkler_95": 11405535.117946409
       },
       {
         "model": "naive",
-        "mae": 449048.1524323612,
-        "rmse": 585024.1770776269,
+        "mae": 1550624.0238888892,
+        "rmse": 2090089.3837883158,
         "n_eval": 36,
-        "picp_80": 0.6388888889,
-        "mpiw_80": 1005322.3256366237,
-        "winkler_80": 1904764.6054437666,
-        "picp_95": 0.8333333333,
-        "mpiw_95": 1335504.171587507,
-        "winkler_95": 3386781.0284752725
+        "picp_80": 0.8055555556,
+        "mpiw_80": 4185331.370166672,
+        "winkler_80": 6706133.6185000045,
+        "picp_95": 0.9722222222,
+        "mpiw_95": 7764482.241041664,
+        "winkler_95": 12349812.611319445
+      },
+      {
+        "model": "bayesian",
+        "mae": 1960355.0097862007,
+        "rmse": 2660048.204092893,
+        "n_eval": 36,
+        "picp_80": 0.8611111111,
+        "mpiw_80": 8364669.37887096,
+        "winkler_80": 10318827.514422541,
+        "picp_95": 0.9722222222,
+        "mpiw_95": 12992136.69280241,
+        "winkler_95": 14423970.454300188
       }
     ]
   },
   "scenario": {
     "factor": 1.2
   },
+  "bayesian_log_target": true,
   "engine_crosscheck": {
-    "structural_max_gap_sd": 1.0220635045820017,
-    "holiday_max_gap_sd": 3.443679222776297,
-    "terms_within_2sd": 16,
+    "structural_max_gap_sd": 0.6521352774944869,
+    "holiday_max_gap_sd": 1.1622605241315829,
+    "terms_within_2sd": 18,
     "terms_total": 18,
-    "predictive_median_max_rel_diff": 0.010791227292899531,
-    "predictive_band95_mean_overlap": 0.9885699149481976,
+    "predictive_median_max_rel_diff": 0.017470354534761902,
+    "predictive_band95_mean_overlap": 0.9636719950882782,
     "note": "Same likelihood, different (documented) priors: closed_form uses the reference prior, pymc a weakly-informative N(0, 0.5 sd(y))/HalfNormal. Holiday dummies have only 3-4 event weeks and are prior-sensitive; the predictive distributions agree closely regardless."
   }
 }

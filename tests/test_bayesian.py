@@ -79,6 +79,40 @@ def test_predictive_coverage_is_near_nominal():
     assert 0.75 <= covered <= 1.0
 
 
+def test_log_target_keeps_predictions_positive_and_ordered():
+    """log-space fit: exponentiating the draws must keep bands ordered."""
+    train = generate_weekly_sales(n_weeks=120, seed=42)
+    model = BayesianForecast(train, engine="closed_form", order=4, seed=0, log_target=True).fit()
+    assert model.log_target is True
+    pred = model.predict(periods=6, n_samples=600)
+    assert (pred["lower_95"] > 0).all()
+    assert (pred["lower_80"] <= pred["yhat"]).all()
+    assert (pred["yhat"] <= pred["upper_80"]).all()
+    assert (pred["upper_80"] <= pred["upper_95"]).all()
+
+
+def test_log_target_forecasts_are_calibrated_on_multiplicative_data():
+    """The log-space engine must still produce near-nominal coverage.
+
+    Note: on this generator the *seasonal* component is additive while the noise
+    is multiplicative, so a level-space fit is not obviously worse here. The
+    measured log-vs-level win is on the real Walmart series (see README); what
+    this test guards is the invariant the dashboard relies on either way — the
+    bands stay calibrated.
+    """
+    series = generate_weekly_sales(n_weeks=180, seed=42)
+    train, test = series.iloc[:130], series.iloc[130:]
+    model = BayesianForecast(
+        train, engine="closed_form", order=4, seed=0, log_target=True
+    ).fit()
+    pred = model.predict(periods=len(test), levels=(0.95,), n_samples=4000)
+    covered = np.mean(
+        (test["y"].to_numpy() >= pred["lower_95"].to_numpy())
+        & (test["y"].to_numpy() <= pred["upper_95"].to_numpy())
+    )
+    assert 0.75 <= covered <= 1.0
+
+
 def test_parameter_summary_reports_every_term():
     train = generate_weekly_sales(n_weeks=80, seed=42)
     model = BayesianForecast(train, engine="closed_form", order=2, seed=0).fit()

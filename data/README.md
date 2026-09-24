@@ -12,10 +12,21 @@
 
 ### Getting it
 
-1. Log in to Kaggle and **accept the competition rules** (the API returns 401
-   until you do — the token alone is not enough).
-2. Create an API token: Kaggle → Settings → API → *Create New Token* → save as
-   `~/.kaggle/kaggle.json` (Windows: `C:\Users\<you>\.kaggle\kaggle.json`).
+The processed series is **already committed** at
+`data/processed/weekly_total.csv`, so the dashboard and tests run without any
+credentials. To rebuild it from Kaggle:
+
+1. Log in to Kaggle and **accept the competition rules** (competition data is
+   gated separately from authentication).
+2. Create an API token: Kaggle → Settings → API → *Create New Token*. Kaggle now
+   issues `KGAT_`-style tokens — save it as `~/.kaggle/access_token`
+   (Windows: `C:\Users\<you>\.kaggle\access_token`, one line, no quotes) or
+   export `KAGGLE_API_TOKEN`.
+
+   > The legacy `~/.kaggle/kaggle.json` (username + key) is **no longer honoured
+   > by the Kaggle API**. A stale one produces `401` on *every* call, including
+   > endpoints that need no competition access — so check authentication before
+   > assuming the rules gate is the problem.
 3. Fetch and cache the processed series:
 
 ```bash
@@ -28,6 +39,10 @@ or in Python:
 from forecast.data_loader import prepare_walmart_series
 series = prepare_walmart_series(download=True)   # -> ds, y, IsHoliday
 ```
+
+Kaggle serves `train.csv.zip`, `features.csv.zip`, `test.csv.zip` and
+`stores.csv`; the loader reads the zipped CSVs directly (pandas infers the
+compression), so nothing needs extracting first.
 
 ### What is committed here
 

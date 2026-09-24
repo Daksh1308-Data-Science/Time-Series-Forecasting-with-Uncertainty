@@ -131,7 +131,7 @@ def decomposition_figure(parts: dict) -> go.Figure:
 st.sidebar.title("Demand forecasting")
 source_label = st.sidebar.selectbox(
     "Data source",
-    ["Synthetic demo series (seed 42)", "Walmart — real Kaggle data"],
+    ["Walmart — real Kaggle data", "Synthetic demo series (seed 42)"],
 )
 source = "walmart" if source_label.startswith("Walmart") else "synthetic"
 horizon = st.sidebar.slider("Forecast horizon (weeks)", 1, 12, 6)

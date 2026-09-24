@@ -23,6 +23,7 @@ from .data_generator import normalize_weekly_ds
 
 COMPETITION = "walmart-recruiting-store-sales-forecasting"
 COMPETITION_URL = "https://www.kaggle.com/competitions/walmart-recruiting-store-sales-forecasting"
+# Kaggle serves most of these zipped; pandas infers the compression on read.
 RAW_FILES = ("train.csv", "features.csv", "stores.csv")
 CACHED_SERIES = Path("data") / "processed" / "weekly_total.csv"
 
@@ -32,9 +33,19 @@ def project_root() -> Path:
 
 
 def kaggle_credentials_present() -> bool:
-    """True if a Kaggle API token is available to kagglehub."""
+    """True if Kaggle credentials are available to kagglehub.
+
+    Kaggle now issues ``KGAT_``-style tokens, supplied either as the
+    ``KAGGLE_API_TOKEN`` environment variable or as ``~/.kaggle/access_token``.
+    The legacy ``~/.kaggle/kaggle.json`` (username + key) is still accepted by
+    kagglehub but is no longer honoured by the Kaggle API itself.
+    """
+    if os.environ.get("KAGGLE_API_TOKEN"):
+        return True
     candidates = [
+        Path.home() / ".kaggle" / "access_token",
         Path.home() / ".kaggle" / "kaggle.json",
+        Path(os.environ.get("USERPROFILE", "")) / ".kaggle" / "access_token",
         Path(os.environ.get("USERPROFILE", "")) / ".kaggle" / "kaggle.json",
     ]
     return any(c.is_file() for c in candidates if str(c))
@@ -68,26 +79,39 @@ def download_walmart(raw_dir: Path | None = None, force: bool = False) -> Path:
     target = raw_dir or (project_root() / "data" / "raw")
     target.mkdir(parents=True, exist_ok=True)
     for name in RAW_FILES:
-        found = next((p for p in source.rglob(name) if p.is_file()), None)
+        # Kaggle ships most of these as <name>.zip; keep whatever it gave us.
+        found = next(
+            (p for p in source.rglob("*") if p.is_file() and p.name in (name, f"{name}.zip")),
+            None,
+        )
         if found is None:
             raise FileNotFoundError(f"{name} missing from the downloaded archive at {source}")
-        destination = target / name
+        destination = target / found.name
         if force or not destination.exists():
             shutil.copy2(found, destination)
     return target
 
 
 def load_raw(data_dir: Path | None = None) -> dict[str, pd.DataFrame]:
-    """Load the raw competition CSVs (train, features, stores) from ``data_dir``."""
+    """Load the raw competition CSVs (train, features, stores) from ``data_dir``.
+
+    Accepts both ``train.csv`` and ``train.csv.zip`` — pandas infers the
+    compression, so nothing needs extracting first.
+    """
     data_dir = Path(data_dir) if data_dir else project_root() / "data" / "raw"
     frames = {}
     for name in RAW_FILES:
-        path = data_dir / name
-        if not path.is_file():
+        path = next(
+            (p for p in (data_dir / name, data_dir / f"{name}.zip") if p.is_file()), None
+        )
+        if path is None:
             raise FileNotFoundError(
-                f"{path} not found. Run forecast.data_loader.download_walmart() first."
+                f"{name} (or {name}.zip) not found in {data_dir}. "
+                "Run forecast.data_loader.download_walmart() first."
             )
-        frames[Path(name).stem] = pd.read_csv(path, parse_dates=["Date"])
+        # stores.csv is Store/Type/Size only - it has no Date column.
+        parse_dates = [] if Path(name).stem == "stores" else ["Date"]
+        frames[Path(name).stem] = pd.read_csv(path, parse_dates=parse_dates)
     return frames
 
 

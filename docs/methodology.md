@@ -35,7 +35,7 @@ It is the practical baseline a data scientist would ship first.
 ### 3. Bayesian structural model (this project's core)
 
 ```
-y_t  ~  Normal(mu_t, sigma)
+log y_t  ~  Normal(mu_t, sigma)
 mu_t = const + beta_trend * t
      + sum_k [ a_k cos(2 pi k t / 52) + b_k sin(2 pi k t / 52) ]
      + sum_h gamma_h * 1[week t is holiday h]
@@ -50,6 +50,24 @@ mu_t = const + beta_trend * t
   spread of beta and sigma) *and* observation noise (the predictive draw for a
   new week) are both included. This is the substantive difference from
   Prophet's simulation-based bands.
+
+The Gaussian sits on `log(demand)` (`log_target=True`, the default in
+`configs/default.toml`) because retail demand is multiplicative and right-skewed.
+Predictive draws are exponentiated back to units; a monotone transform leaves
+the median and every quantile **exact**, so no smearing correction is needed.
+
+Measured effect of the log specification on the real Walmart series:
+
+| Bayesian variant | MAE | Winkler @95% ↓ | 95% width |
+|---|---:|---:|---:|
+| level-space (`--no-log-target`) | 2,095,763 | 16,317,831 | 15,984,013 |
+| **log-space (default)** | **1,960,355** | **14,423,970** | **12,992,137** |
+
+**Known weakness, stated plainly:** this model has a single global linear trend.
+Prophet fits a *piecewise* trend with automatic changepoints, which absorbs
+Walmart's 2011 level shift. On the real data that is the main reason Prophet
+achieves a 45% lower MAE. Trend flexibility is the first thing to add — not a
+tuning knob.
 
 Two interchangeable engines:
 
@@ -67,21 +85,32 @@ exact posterior for this model class.
 | | prior on beta | prior on sigma |
 |---|---|---|
 | `closed_form` | reference prior `p ∝ 1` (flat) | reference `p ∝ 1/sigma^2` → InvGamma posterior |
-| `pymc` | weakly informative `N(0, 0.5 sd(y))` | `HalfNormal(0.25 sd(y))` |
+| `pymc` | `N(0, 1)` on the **standardised** response `z = (y - loc)/scale` | `HalfNormal(1)` on `z`, mapped back to units |
 
 Same likelihood, different priors, so *term-level* estimates are not
-guaranteed to match — and for the holiday dummies they visibly do not, because
-each dummy is supported by only 3–4 event weeks and is therefore strongly
-prior-sensitive. `scripts/run_evaluation.py` measures this rather than hiding
-it (`reports/engine_crosscheck_*.csv`):
+guaranteed to match — and for the holiday dummies they are the most likely to
+diverge, because each dummy is supported by only 3–4 event weeks and is
+therefore strongly prior-sensitive. `scripts/run_evaluation.py` measures this
+rather than hiding it (`reports/engine_crosscheck_*.csv`). On the real Walmart
+series:
 
-- well-identified structural terms (intercept, trend, Fourier) should agree to
-  a fraction of a posterior standard deviation;
-- holiday dummies may disagree — and the size of that disagreement *is* the
-  honest uncertainty on a 3-week event effect;
-- the **predictive** distributions agree closely, because the term-level
-  disagreement largely cancels in `mu_t`. The predictive interval is what the
-  project ships, so the predictive comparison is the one that matters.
+| Cross-check | Measured |
+|---|---|
+| Structural terms (intercept, trend, Fourier) | agree within **0.65 posterior SD** (max) |
+| Holiday dummies | agree within 1.16 posterior SD (max) |
+| Terms within 2 SD of each other | **18 / 18** |
+| Predictive medians | agree to **1.7%** (max relative difference) |
+| Predictive 95% bands | overlap **96.4%** (mean overlap fraction) |
+
+The predictive agreement is the number that matters — it is what the project
+ships. The term-level gaps are reported because a 3-week event effect *is*
+prior-sensitive, and that is a finding about the data, not a bug.
+
+> Standardising the response in the PyMC engine is not cosmetic. An
+> unstandardised `N(0, std(y))` prior on the intercept is harmless on the level
+> scale but, in log space, places the intercept ~170 prior SDs away from its
+> posterior mass and stalls NUTS (the cross-check reported 1212-SD "gaps" and
+> −334% band overlaps before this was fixed).
 
 If you want the two engines to be term-comparable, fit PyMC with the reference
 prior (or add a matching normal prior to the closed form); the project instead

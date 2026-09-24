@@ -92,6 +92,7 @@ class BayesianForecast:
         tune: int = 1500,
         chains: int = 2,
         levels=DEFAULT_LEVELS,
+        log_target: bool = False,
     ) -> None:
         frame = df.reset_index(drop=True)
         self.ds = pd.to_datetime(frame["ds"])
@@ -101,6 +102,12 @@ class BayesianForecast:
         self.engine = resolve_engine(engine)
         self.seed, self.draws, self.tune, self.chains = seed, draws, tune, chains
         self.levels = tuple(levels)
+        # Retail demand is multiplicative and right-skewed, so the Gaussian
+        # belongs on log(y), not on y. Exponentiating the predictive draws
+        # leaves the median and every quantile exact (a monotone transform),
+        # so no smearing correction is needed.
+        self.log_target = log_target
+        self._y_model = np.log(self.y) if log_target else self.y
 
         self._n = self.y.size
         self._t = np.arange(self._n, dtype=float)
@@ -124,9 +131,10 @@ class BayesianForecast:
 
     def _fit_closed_form(self) -> None:
         n, p = self.X.shape
+        y = self._y_model
         xtx_inv = np.linalg.pinv(self.X.T @ self.X)
-        self.beta_hat = xtx_inv @ (self.X.T @ self.y)
-        resid = self.y - self.X @ self.beta_hat
+        self.beta_hat = xtx_inv @ (self.X.T @ y)
+        resid = y - self.X @ self.beta_hat
         self.nu = float(max(n - p, 1))
         self.sigma2_hat = float(resid @ resid) / self.nu
         self._xtx_inv = xtx_inv
@@ -135,17 +143,21 @@ class BayesianForecast:
     def _fit_pymc(self) -> None:
         import pymc as pm
 
-        scale = float(np.std(self.y)) or 1.0
-        # Const/trend are on the sales scale; seasonal and holiday effects are
-        # smaller, so give them tighter priors (a sensible weak prior, not a
-        # knife-edge specification).
-        sigma_prior = np.array(
-            [scale if name in ("const", "trend") else 0.5 * scale for name in self.names]
-        )
+        y = self._y_model
+        # Fit on a standardised response so the prior is genuinely weakly
+        # informative and scale-free: N(0, 1) on z = (y - loc) / scale means the
+        # same thing whether y is in units (millions) or in logs. On the level
+        # scale a raw N(0, std(y)) prior would put the intercept ~170 prior SDs
+        # away from its posterior mass and stall NUTS. Coefficients are mapped
+        # back to the response scale afterwards, so the reported summary is
+        # directly comparable with the closed-form engine.
+        loc = float(np.mean(y))
+        scale = float(np.std(y)) or 1.0
+        z = (y - loc) / scale
         with pm.Model() as model:
-            beta = pm.Normal("beta", mu=0.0, sigma=sigma_prior, shape=len(self.names))
-            sigma = pm.HalfNormal("sigma", sigma=max(scale / 4.0, 1e-6))
-            pm.Normal("obs", mu=self.X @ beta, sigma=sigma, observed=self.y)
+            beta = pm.Normal("beta", mu=0.0, sigma=1.0, shape=len(self.names))
+            sigma = pm.HalfNormal("sigma", sigma=1.0)
+            pm.Normal("obs", mu=self.X @ beta, sigma=sigma, observed=z)
             self.idata = pm.sample(
                 draws=self.draws,
                 tune=self.tune,
@@ -154,8 +166,12 @@ class BayesianForecast:
                 random_seed=self.seed,
                 progressbar=False,
             )
-        self._beta_draws = self.idata.posterior["beta"].values.reshape(-1, len(self.names))
-        self._sigma_draws = self.idata.posterior["sigma"].values.reshape(-1)
+        beta_z = self.idata.posterior["beta"].values.reshape(-1, len(self.names))
+        sigma_z = self.idata.posterior["sigma"].values.reshape(-1)
+        # mu_y = loc + scale * X @ beta_z, and X's first column is the intercept.
+        self._beta_draws = beta_z * scale
+        self._beta_draws[:, 0] += loc
+        self._sigma_draws = sigma_z * scale
 
     # ------------------------------------------------------------- predict
     def _future_design(self, periods: int) -> np.ndarray:
@@ -198,6 +214,8 @@ class BayesianForecast:
 
         mean_draws = X_future @ beta_draws.T  # (periods, n_samples)
         samples = mean_draws + rng.standard_normal(mean_draws.shape) * sigma_draws[None, :]
+        if self.log_target:
+            samples = np.exp(samples)  # exact under a monotone transform
         return dates, samples
 
     def predict(
