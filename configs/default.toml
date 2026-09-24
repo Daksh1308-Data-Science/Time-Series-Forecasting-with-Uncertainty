@@ -1,0 +1,34 @@
+# Default configuration (stdlib tomllib, no YAML dependency).
+
+[data]
+period = 52            # weekly series -> 52-week yearly seasonality
+holiday_effects = true
+
+[evaluation]
+# Expanding-window walk-forward: train on >= min_train weeks, forecast the next
+# `horizon` weeks, roll forward by `step` weeks. This is what makes measured
+# coverage honest instead of a single noisy holdout.
+horizon = 6
+min_train = 104
+step = 6
+max_folds = 6
+
+[intervals]
+levels = [0.80, 0.95]
+
+[bayesian]
+fourier_order = 6      # Fourier pairs for the 52-week seasonal cycle
+# closed_form = the exact conjugate (Normal-Inverse-Gamma) posterior for this
+# model: instant, deterministic, and verified against a full NUTS fit by
+# `scripts/run_evaluation.py` (reports/engine_crosscheck_*.csv).
+# Set to "pymc" to sample the posterior with NUTS in every walk-forward fold.
+engine = "closed_form" # auto | pymc | closed_form
+draws = 1500
+tune = 1500
+chains = 2
+seed = 42
+
+[prophet]
+changepoint_prior_scale = 0.05
+seasonality_prior_scale = 10.0
+uncertainty_samples = 1000

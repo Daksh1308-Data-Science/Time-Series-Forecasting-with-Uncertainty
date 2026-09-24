@@ -1,0 +1,13 @@
+# Normalize line endings: LF in the repo, native checkout on Windows.
+* text=auto
+
+*.py    text diff=python
+*.md    text
+*.toml  text
+*.csv   text
+*.json  text
+
+# Binary
+*.png   binary
+*.jpg   binary
+*.zip   binary

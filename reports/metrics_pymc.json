@@ -1,0 +1,65 @@
+{
+  "library_version": "0.1.0",
+  "source": "synthetic",
+  "source_label": "Synthetic weekly retail demand (seed 42) - NOT real data",
+  "rows": 156,
+  "first_week": "2010-02-05",
+  "last_week": "2013-01-25",
+  "decomposition": {
+    "seasonal_strength": 0.7342
+  },
+  "walk_forward": {
+    "folds": 6,
+    "horizon": 6,
+    "min_train": 104,
+    "engine_requested": "pymc",
+    "engines_used": {
+      "naive": null,
+      "bayesian": "pymc",
+      "prophet": null
+    },
+    "skipped": {},
+    "table": [
+      {
+        "model": "bayesian",
+        "mae": 333526.1486088178,
+        "rmse": 429193.5661935538,
+        "n_eval": 36,
+        "picp_80": 0.6666666667,
+        "mpiw_80": 789872.302758369,
+        "winkler_80": 1533635.0607944825,
+        "picp_95": 0.9166666667,
+        "mpiw_95": 1219172.1077776465,
+        "winkler_95": 2546778.3889978793
+      },
+      {
+        "model": "prophet",
+        "mae": 341329.8700642553,
+        "rmse": 424917.9894299529,
+        "n_eval": 36,
+        "picp_80": 0.5,
+        "mpiw_80": 600812.5110475876,
+        "winkler_80": 1754684.799648153,
+        "picp_95": 0.75,
+        "mpiw_95": 923773.4480637773,
+        "winkler_95": 3197538.071354402
+      },
+      {
+        "model": "naive",
+        "mae": 449048.1524323612,
+        "rmse": 585024.1770776269,
+        "n_eval": 36,
+        "picp_80": 0.6388888889,
+        "mpiw_80": 1005322.3256366237,
+        "winkler_80": 1904764.6054437666,
+        "picp_95": 0.8333333333,
+        "mpiw_95": 1335504.171587507,
+        "winkler_95": 3386781.0284752725
+      }
+    ]
+  },
+  "scenario": {
+    "factor": 1.2
+  },
+  "engine_crosscheck": null
+}

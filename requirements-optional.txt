@@ -1,0 +1,14 @@
+# Optional engines. The project runs without these:
+#   - Bayesian model falls back to the exact conjugate (Normal-Inverse-Gamma) posterior.
+#   - Prophet-backed comparisons are skipped and labelled as such.
+#
+# pymc: NUTS sampler. Wheels exist for most Python versions; on a brand-new
+#       interpreter (e.g. 3.14) the pytensor build may be unavailable — that is
+#       fine, the closed-form engine takes over automatically.
+pymc>=5.19
+
+# prophet: v1.4 is in maintenance mode. On Windows the FIRST fit compiles
+# CmdStan and needs a C++ toolchain. Auto-install it with:
+#     python -c "import cmdstanpy; cmdstanpy.install_cxx_toolchain(force=True)"
+#     python -c "import cmdstanpy; cmdstanpy.install_cmdstan(compiler=True)"
+prophet>=1.2

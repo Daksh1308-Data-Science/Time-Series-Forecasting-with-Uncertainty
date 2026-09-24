@@ -1,0 +1,12 @@
+# Core — everything the library, tests and dashboard need.
+numpy>=2.0
+pandas>=2.2
+scikit-learn>=1.5
+statsmodels>=0.14
+matplotlib>=3.9
+plotly>=5.24
+streamlit>=1.40
+kagglehub>=0.3
+pytest>=8.0
+
+# Optional heavy engines live in requirements-optional.txt (pymc, prophet).

@@ -1,0 +1,73 @@
+{
+  "library_version": "0.1.0",
+  "source": "synthetic",
+  "source_label": "Synthetic weekly retail demand (seed 42) - NOT real data",
+  "rows": 156,
+  "first_week": "2010-02-05",
+  "last_week": "2013-01-25",
+  "decomposition": {
+    "seasonal_strength": 0.7342
+  },
+  "walk_forward": {
+    "folds": 6,
+    "horizon": 6,
+    "min_train": 104,
+    "engine_requested": "closed_form",
+    "engines_used": {
+      "naive": null,
+      "bayesian": "closed_form",
+      "prophet": null
+    },
+    "skipped": {},
+    "table": [
+      {
+        "model": "bayesian",
+        "mae": 339883.8052062055,
+        "rmse": 438500.13700696,
+        "n_eval": 36,
+        "picp_80": 0.6388888889,
+        "mpiw_80": 727994.5501002898,
+        "winkler_80": 1635732.3003840405,
+        "picp_95": 0.8611111111,
+        "mpiw_95": 1129760.9882913292,
+        "winkler_95": 2860296.916966713
+      },
+      {
+        "model": "prophet",
+        "mae": 341329.8700642553,
+        "rmse": 424917.9894299529,
+        "n_eval": 36,
+        "picp_80": 0.5277777778,
+        "mpiw_80": 602259.0803752416,
+        "winkler_80": 1759283.5375384113,
+        "picp_95": 0.75,
+        "mpiw_95": 923571.7393627367,
+        "winkler_95": 3243496.2162733567
+      },
+      {
+        "model": "naive",
+        "mae": 449048.1524323612,
+        "rmse": 585024.1770776269,
+        "n_eval": 36,
+        "picp_80": 0.6388888889,
+        "mpiw_80": 1005322.3256366237,
+        "winkler_80": 1904764.6054437666,
+        "picp_95": 0.8333333333,
+        "mpiw_95": 1335504.171587507,
+        "winkler_95": 3386781.0284752725
+      }
+    ]
+  },
+  "scenario": {
+    "factor": 1.2
+  },
+  "engine_crosscheck": {
+    "structural_max_gap_sd": 1.0220635045820017,
+    "holiday_max_gap_sd": 3.443679222776297,
+    "terms_within_2sd": 16,
+    "terms_total": 18,
+    "predictive_median_max_rel_diff": 0.010791227292899531,
+    "predictive_band95_mean_overlap": 0.9885699149481976,
+    "note": "Same likelihood, different (documented) priors: closed_form uses the reference prior, pymc a weakly-informative N(0, 0.5 sd(y))/HalfNormal. Holiday dummies have only 3-4 event weeks and are prior-sensitive; the predictive distributions agree closely regardless."
+  }
+}

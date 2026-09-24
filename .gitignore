@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+.env
+.streamlit/secrets.toml
+results/cache/
+# Raw Kaggle competition files: not committed (subject to competition rules).
+# data/processed/ IS committed so the project runs without Kaggle credentials.
+data/raw/
